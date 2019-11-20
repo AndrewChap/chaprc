@@ -12,6 +12,7 @@ function sb(){
 }
 # quick helper function to edit bashrc
 function eb(){
+    echo vi ~/.bashrc
     vi ~/.bashrc
 }
 
