@@ -1,3 +1,182 @@
+# ~/.bashrc: executed by bash(1) for non-login shells.
+# see /usr/share/doc/bash/examples/startup-files (in the package bash-doc)
+# for examples
+
+# If not running interactively, don't do anything
+case $- in
+    *i*) ;;
+      *) return;;
+esac
+
+# don't put duplicate lines or lines starting with space in the history.
+# See bash(1) for more options
+HISTCONTROL=ignoreboth
+
+# append to the history file, don't overwrite it
+shopt -s histappend
+
+# for setting history length see HISTSIZE and HISTFILESIZE in bash(1)
+HISTSIZE=1000
+HISTFILESIZE=2000
+
+# check the window size after each command and, if necessary,
+# update the values of LINES and COLUMNS.
+shopt -s checkwinsize
+
+# If set, the pattern "**" used in a pathname expansion context will
+# match all files and zero or more directories and subdirectories.
+#shopt -s globstar
+
+# make less more friendly for non-text input files, see lesspipe(1)
+[ -x /usr/bin/lesspipe ] && eval "$(SHELL=/bin/sh lesspipe)"
+
+# set variable identifying the chroot you work in (used in the prompt below)
+if [ -z "${debian_chroot:-}" ] && [ -r /etc/debian_chroot ]; then
+    debian_chroot=$(cat /etc/debian_chroot)
+fi
+
+# set a fancy prompt (non-color, unless we know we "want" color)
+case "$TERM" in
+    xterm-color|*-256color) color_prompt=yes;;
+esac
+
+# uncomment for a colored prompt, if the terminal has the capability; turned
+# off by default to not distract the user: the focus in a terminal window
+# should be on the output of commands, not on the prompt
+#force_color_prompt=yes
+
+if [ -n "$force_color_prompt" ]; then
+    if [ -x /usr/bin/tput ] && tput setaf 1 >&/dev/null; then
+	# We have color support; assume it's compliant with Ecma-48
+	# (ISO/IEC-6429). (Lack of such support is extremely rare, and such
+	# a case would tend to support setf rather than setaf.)
+	color_prompt=yes
+    else
+	color_prompt=
+    fi
+fi
+
+# Only show directory in bash prompt, not entire path, from 
+# https://unix.stackexchange.com/questions/216953/show-only-current-and-parent-directory-in-bash-prompt
+# PS1='${PWD#"${PWD%/*/*}/"} \$ '
+
+# Who wants to type out python3?
+alias py3=python3
+
+if [ "$color_prompt" = yes ]; then
+    PS1='${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ '
+else
+    PS1='${debian_chroot:+($debian_chroot)}\u@\h:\w\$ '
+fi
+unset color_prompt force_color_prompt
+BRIGHT_COLOR='\e[35m'
+NORMAL_COLOR='\e[0m'
+
+export PS1="\n\[$BRIGHT_COLOR\]\w ▶  \[$NORMAL_COLOR\]"
+PS1="\[\e[34;45m\]\w\[\e[m\]\[\e[35m\]▶\[\e[m\] "
+BG='\e[34;43m'
+DirColor='\e[34m'
+GitColor='\e[32m'
+ResetColor='\e[0m'
+function print_branch {
+    git branch 2> /dev/null | grep '^*' | colrm 1 2
+}
+# icons:
+# https://gist.github.com/ngs/2782436
+function print_status {
+    local git_status="$(git status 2> /dev/null)"
+    status=''
+    if [[ $git_status =~ "is ahead of" ]]; then
+        status=${status}"➔ "
+    fi
+    if [[ $git_status =~ "Your branch is up to date" ]]; then
+        status=${status}"⦾ "
+    fi
+    if [[ $git_status =~ "Changes not staged for commit" ]]; then
+        status=${status}"✎ "
+    fi
+    if [[ $git_status =~ "Changes to be committed" ]]; then
+        status=${status}"✔ "
+    fi
+    if [[ $git_status =~ "working tree clean" ]]; then
+        status=${status}"❈ "
+    fi
+    if [[ $git_status =~ "Untracked files" ]]; then
+        status=${status}"‽ "
+    fi
+    echo -e $status
+}
+function git_symbol {
+    #status=$("git status 2> /dev/null")
+    if [[ $(git status 2> /dev/null) ]]; then
+        echo -e ⸙
+    fi
+}
+
+PS1="\[$DirColor\]\w \[$GitColor\](\$(git branch 2>/dev/null | grep '^*' | colrm 1 2))\[\033[00m\] "
+PS1="\[$DirColor\]\w\[$GitColor\]\$(git_symbol)\$(print_branch)\$(print_status)\[$ResetColor\] "
+PS1="\[$GitColor\]\$(print_branch)\$(print_status) \[$DirColor\]\w\[$ResetColor\]⟫ "
+
+
+# ✎  -- a file has been modified (but not staged for commit, in git)
+# ✔  -- a file is staged for commit (git) or added for tracking
+# ✼  -- a file has conflicts
+# ‽  -- a file is untracked
+# ⦿⦾
+
+# If this is an xterm set the title to user@host:dir
+case "$TERM" in
+xterm*|rxvt*)
+    PS1="\[\e]0;${debian_chroot:+($debian_chroot)}\u@\h: \w\a\]$PS1"
+    ;;
+*)
+    ;;
+esac
+
+# enable color support of ls and also add handy aliases
+if [ -x /usr/bin/dircolors ]; then
+    test -r ~/.dircolors && eval "$(dircolors -b ~/.dircolors)" || eval "$(dircolors -b)"
+    alias ls='ls --color=auto'
+    #alias dir='dir --color=auto'
+    #alias vdir='vdir --color=auto'
+
+    alias grep='grep --color=auto'
+    alias fgrep='fgrep --color=auto'
+    alias egrep='egrep --color=auto'
+fi
+
+# colored GCC warnings and errors
+#export GCC_COLORS='error=01;31:warning=01;35:note=01;36:caret=01;32:locus=01:quote=01'
+
+# some more ls aliases
+alias ll='ls -alF'
+alias la='ls -A'
+alias l='ls -CF'
+
+# Add an "alert" alias for long running commands.  Use like so:
+#   sleep 10; alert
+alias alert='notify-send --urgency=low -i "$([ $? = 0 ] && echo terminal || echo error)" "$(history|tail -n1|sed -e '\''s/^\s*[0-9]\+\s*//;s/[;&|]\s*alert$//'\'')"'
+
+# Alias definitions.
+# You may want to put all your additions into a separate file like
+# ~/.bash_aliases, instead of adding them here directly.
+# See /usr/share/doc/bash-doc/examples in the bash-doc package.
+
+if [ -f ~/.bash_aliases ]; then
+    . ~/.bash_aliases
+fi
+
+# enable programmable completion features (you don't need to enable
+# this, if it's already enabled in /etc/bash.bashrc and /etc/profile
+# sources /etc/bash.bashrc).
+if ! shopt -oq posix; then
+  if [ -f /usr/share/bash-completion/bash_completion ]; then
+    . /usr/share/bash-completion/bash_completion
+  elif [ -f /etc/bash_completion ]; then
+    . /etc/bash_completion
+  fi
+fi
+
 # history search
 if [[ $- == *i* ]]
 then
@@ -15,43 +194,25 @@ function eb(){
     echo vi ~/.bashrc
     vi ~/.bashrc
 }
-
-# Only show directory in bash prompt, not entire path, from 
-# https://unix.stackexchange.com/questions/216953/show-only-current-and-parent-directory-in-bash-prompt
-PS1='${PWD#"${PWD%/*/*}/"} \$ '
-
-# set git editor to vim
-export GIT_EDITOR=vim
-
-# Who wants to type out python3?
-alias py3=python3
-
-
-# FUNCTIONS SPECIFIC TO MY GOOGLE CLOUD PLATFORM ENVIRONMENT
-export F='/home/amchap06/python-docs-samples/appengine/flexible'
-# cd to flex app source and start up the virtual environment
-function w(){
-    echo gcloud config set project andrewchap
-    echo cd ~/website
-    echo source helpers.sh
-    gcloud config set project andrewchap
-    cd ~/website
-    source helpers.sh
+function cb(){
+    echo code ~/.bashrc
+    code ~/.bashrc
 }
-function m(){
-    echo cd $F/mortapp
-    echo source ~/envm/bin/activate
-    echo gcloud config set project mortfl
-    echo source helpers.sh
-    cd $F/mortapp
-    source ~/envm/bin/activate
-    gcloud config set project mortfl
-    source helpers.sh
-}
+
 function s(){
-    cd ~/stock-comparer
-    source env-s/bin/activate
-    gcloud config set project stockcompare
-    source helpers.sh
+  cd ~/stock-comparer
+  source env-s/bin/activate
+  gcloud config set project stockcompare
+  source helpers.sh
 }
 
+# VSCode section
+# When you hit enter and you get a ^M instead
+# https://askubuntu.com/questions/441744/pressing-enter-produces-m-instead-of-a-newline
+
+# From: https://www.meziantou.net/comparing-files-using-visual-studio-code.htm#using-visual-studio-7cf2ec
+# use vscode as git editor
+# git config --global core.editor "code --wait"
+# use vscode as git diff tool
+# git config --global diff.tool vscode
+# git config --global difftool.vscode.cmd "code --wait --diff $LOCAL $REMOTE"
